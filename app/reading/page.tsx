@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import LogReadingModal from '@/components/LogReadingModal';
 import FinishModal from '@/components/FinishModal';
+import AddItemForm from '@/components/AddItemForm';
 import type { ReadingInstance } from '@/lib/types';
 
 export default function ReadingPage() {
@@ -48,9 +49,12 @@ export default function ReadingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display italic text-3xl">Currently Reading</h2>
-        <p className="text-inkfaint text-sm mt-1">Everything active, at a glance.</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-display italic text-3xl">Currently Reading</h2>
+          <p className="text-inkfaint text-sm mt-1">Everything active, at a glance.</p>
+        </div>
+        <AddItemForm destination="reading" onAdded={load} />
       </div>
 
       {loading ? (

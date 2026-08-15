@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { searchOpenLibrary, extractArticleMetadata, OpenLibraryResult } from '@/lib/openlibrary';
 import DuplicateModal from '@/components/DuplicateModal';
@@ -13,7 +14,15 @@ const GENRE_OPTIONS = [
   'Essays', 'Poetry', 'Sociology', 'Religion', 'Culture', 'Criticism', 'Journalism', 'Other',
 ];
 
-export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
+export default function AddItemForm({
+  onAdded,
+  destination = 'tbr',
+}: {
+  onAdded: () => void;
+  /** 'tbr' adds to the To Be Read shelf. 'reading' starts it immediately, skipping TBR entirely. */
+  destination?: 'tbr' | 'reading';
+}) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<WorkType>('book');
   const [title, setTitle] = useState('');
@@ -23,6 +32,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
   const [genres, setGenres] = useState<string[]>([]);
   const [fiction, setFiction] = useState<FictionStatus>(null);
   const [tagsInput, setTagsInput] = useState('');
+  const [collectionsInput, setCollectionsInput] = useState('');
 
   const [candidates, setCandidates] = useState<OpenLibraryResult[]>([]);
   const [chosen, setChosen] = useState<OpenLibraryResult | null>(null);
@@ -42,6 +52,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
     setGenres([]);
     setFiction(null);
     setTagsInput('');
+    setCollectionsInput('');
     setCandidates([]);
     setChosen(null);
     setError(null);
@@ -68,20 +79,25 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
     setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
   }
 
-  async function createWorkAndAddToTbr(payload: any) {
-    const { data: newWork, error: workError } = await supabase
-      .from('works')
-      .insert(payload)
-      .select('id')
-      .single();
-    if (workError) throw workError;
+  async function finalizeNewWork(workId: string) {
+    if (destination === 'reading') {
+      const { data: w } = await supabase.from('works').select('type').eq('id', workId).single();
+      await supabase.from('reading_instances').insert({
+        work_id: workId,
+        status: 'currently_reading',
+        progress_unit: w?.type === 'book' ? 'page' : 'percent',
+        current_progress: 0,
+      });
+      router.push('/reading');
+    } else {
+      await supabase.from('tbr_entries').insert({ work_id: workId, priority, active: true });
+    }
+  }
 
-    const { error: tbrError } = await supabase.from('tbr_entries').insert({
-      work_id: newWork.id,
-      priority,
-      active: true,
-    });
-    if (tbrError) throw tbrError;
+  async function createWork(payload: any) {
+    const { data: newWork, error: workError } = await supabase.from('works').insert(payload).select('id').single();
+    if (workError) throw workError;
+    await finalizeNewWork(newWork.id);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -91,6 +107,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
 
     try {
       const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+      const collections = collectionsInput.split(',').map((c) => c.trim()).filter(Boolean);
 
       let workPayload: any = {
         type,
@@ -98,7 +115,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
         author: author.trim() || null,
         genres,
         tags,
-        collections: [],
+        collections,
       };
 
       if (type === 'book') {
@@ -130,8 +147,6 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
         };
       }
 
-      // Duplicate detection: look for similar titles of the same type
-      // before creating anything.
       const { data: existing } = await supabase
         .from('works')
         .select('*')
@@ -145,7 +160,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
         return;
       }
 
-      await createWorkAndAddToTbr(workPayload);
+      await createWork(workPayload);
       reset();
       setOpen(false);
       onAdded();
@@ -190,7 +205,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
     if (!pendingPayload) return;
     setSaving(true);
     try {
-      await createWorkAndAddToTbr(pendingPayload);
+      await createWork(pendingPayload);
       reset();
       setOpen(false);
       onAdded();
@@ -208,7 +223,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
         onClick={() => setOpen(true)}
         className="catalog-tab bg-spine text-card px-5 py-2.5 rounded-sm hover:bg-spinedark transition-colors"
       >
-        + Add to TBR
+        {destination === 'reading' ? '+ Start Reading Directly' : '+ Add to TBR'}
       </button>
     );
   }
@@ -217,7 +232,9 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
     <>
       <form onSubmit={handleSubmit} className="catalog-card p-5 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-display italic text-xl text-spine">New catalog entry</h3>
+          <h3 className="font-display italic text-xl text-spine">
+            {destination === 'reading' ? 'Start reading something new' : 'New catalog entry'}
+          </h3>
           <button type="button" onClick={() => { reset(); setOpen(false); }} className="catalog-tab text-inkfaint hover:text-ink">
             Cancel
           </button>
@@ -361,6 +378,18 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
             />
           </div>
           <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Collections (comma separated)</label>
+            <input
+              value={collectionsInput}
+              onChange={(e) => setCollectionsInput(e.target.value)}
+              placeholder="2026 Reading List"
+              className="w-full border border-line bg-card rounded-sm px-3 py-2 font-body text-sm"
+            />
+          </div>
+        </div>
+
+        {destination === 'tbr' && (
+          <div>
             <span className="catalog-tab text-inkfaint block mb-1">Priority</span>
             <div className="flex gap-2">
               {(['high', 'medium', 'low'] as const).map((p) => (
@@ -377,7 +406,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
               ))}
             </div>
           </div>
-        </div>
+        )}
 
         {error && <p className="text-sm text-spine">{error}</p>}
 
@@ -386,7 +415,7 @@ export default function AddItemForm({ onAdded }: { onAdded: () => void }) {
           disabled={saving}
           className="catalog-tab bg-spine text-card px-5 py-2.5 rounded-sm hover:bg-spinedark disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'Add to TBR'}
+          {saving ? 'Saving…' : destination === 'reading' ? 'Start Reading' : 'Add to TBR'}
         </button>
       </form>
 

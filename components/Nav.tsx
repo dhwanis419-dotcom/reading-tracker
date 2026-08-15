@@ -23,14 +23,24 @@ export default function Nav() {
           </h1>
           <p className="catalog-tab text-inkfaint mt-0.5">a personal reading archive</p>
         </Link>
-        <Link
-          href="/search"
-          className={`catalog-tab border rounded-sm px-3 py-1.5 ${
-            pathname === '/search' ? 'bg-spine text-card border-spine' : 'border-line text-inkfaint hover:text-ink'
-          }`}
-        >
-          Search
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/organize"
+            className={`catalog-tab border rounded-sm px-3 py-1.5 ${
+              pathname === '/organize' ? 'bg-spine text-card border-spine' : 'border-line text-inkfaint hover:text-ink'
+            }`}
+          >
+            Organize
+          </Link>
+          <Link
+            href="/search"
+            className={`catalog-tab border rounded-sm px-3 py-1.5 ${
+              pathname === '/search' ? 'bg-spine text-card border-spine' : 'border-line text-inkfaint hover:text-ink'
+            }`}
+          >
+            Search
+          </Link>
+        </div>
       </div>
       <nav className="max-w-5xl mx-auto px-2 sm:px-6 mt-4 flex gap-1 overflow-x-auto">
         {items.map((item) => {
