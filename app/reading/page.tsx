@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import LogReadingModal from '@/components/LogReadingModal';
+import FinishModal from '@/components/FinishModal';
 import type { ReadingInstance } from '@/lib/types';
 
 export default function ReadingPage() {
   const [instances, setInstances] = useState<ReadingInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [logging, setLogging] = useState<ReadingInstance | null>(null);
+  const [finishing, setFinishing] = useState<ReadingInstance | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -27,6 +29,20 @@ export default function ReadingPage() {
 
   async function setStatus(instance: ReadingInstance, status: 'paused' | 'currently_reading' | 'dnf') {
     await supabase.from('reading_instances').update({ status }).eq('id', instance.id);
+    load();
+  }
+
+  // After logging a session, check whether it pushed the instance to 100% /
+  // finished. If so, offer the review flow instead of silently marking done.
+  async function handleLogged(instanceId: string) {
+    const { data } = await supabase
+      .from('reading_instances')
+      .select('*, work:works(*)')
+      .eq('id', instanceId)
+      .single();
+    if (data && (data as any).status === 'finished') {
+      setFinishing(data as unknown as ReadingInstance);
+    }
     load();
   }
 
@@ -91,6 +107,9 @@ export default function ReadingPage() {
                         Resume
                       </button>
                     )}
+                    <button onClick={() => setFinishing(inst)} className="catalog-tab border border-line px-3 py-1.5 rounded-sm hover:bg-line/30">
+                      Finish
+                    </button>
                     <button onClick={() => setStatus(inst, 'dnf')} className="catalog-tab border border-line px-3 py-1.5 rounded-sm text-inkfaint hover:bg-line/30">
                       DNF
                     </button>
@@ -103,7 +122,15 @@ export default function ReadingPage() {
       )}
 
       {logging && (
-        <LogReadingModal instance={logging} onClose={() => setLogging(null)} onLogged={load} />
+        <LogReadingModal
+          instance={logging}
+          onClose={() => setLogging(null)}
+          onLogged={() => handleLogged(logging.id)}
+        />
+      )}
+
+      {finishing && (
+        <FinishModal instance={finishing} onClose={() => setFinishing(null)} onSaved={load} />
       )}
     </div>
   );
