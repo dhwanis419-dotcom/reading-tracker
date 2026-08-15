@@ -33,6 +33,7 @@ export default function EditWorkModal({
   const [collectionsInput, setCollectionsInput] = useState((work.collections || []).join(', '));
   const [articleUrl, setArticleUrl] = useState(work.article_url || '');
   const [articleSite, setArticleSite] = useState(work.article_site || '');
+  const [generalNotes, setGeneralNotes] = useState(work.general_notes || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +61,7 @@ export default function EditWorkModal({
           collections: collectionsInput.split(',').map((c) => c.trim()).filter(Boolean),
           article_url: articleUrl.trim() || null,
           article_site: articleSite.trim() || null,
+          general_notes: generalNotes.trim() || null,
         })
         .eq('id', work.id);
       if (err) throw err;
@@ -172,6 +174,17 @@ export default function EditWorkModal({
             <label className="catalog-tab text-inkfaint block mb-1">Collections (comma separated)</label>
             <input value={collectionsInput} onChange={(e) => setCollectionsInput(e.target.value)} className="w-full border border-line bg-card rounded-sm px-3 py-2 text-sm" placeholder="2026 Reading List, Classics" />
           </div>
+        </div>
+
+        <div>
+          <label className="catalog-tab text-inkfaint block mb-1">General notes</label>
+          <textarea
+            value={generalNotes}
+            onChange={(e) => setGeneralNotes(e.target.value)}
+            rows={3}
+            placeholder="Notes about this work that aren't tied to a specific reading session — background, context, why it's on your list, etc."
+            className="w-full border border-line bg-card rounded-sm px-3 py-2 text-sm"
+          />
         </div>
 
         {error && <p className="text-sm text-spine">{error}</p>}

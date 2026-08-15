@@ -21,6 +21,7 @@ export interface Work {
   article_site: string | null;
   article_pub_date: string | null;
   article_read_time: number | null;
+  general_notes: string | null;
   created_at: string;
 }
 

@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { TbrEntry, WorkType } from '@/lib/types';
 
-type SortKey = 'date_added_desc' | 'date_added_asc' | 'author_az' | 'title_az' | 'pages_asc' | 'pages_desc' | 'priority';
+type SortKey = 'date_added_desc' | 'date_added_asc' | 'author_az' | 'author_za' | 'title_az' | 'title_za' | 'pages_asc' | 'pages_desc' | 'priority' | 'genre' | 'type';
 
 const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
@@ -75,14 +75,22 @@ export default function TbrList({ entries, onChanged }: { entries: TbrEntry[]; o
           return new Date(b.date_added).getTime() - new Date(a.date_added).getTime();
         case 'author_az':
           return (wa?.author || '').localeCompare(wb?.author || '');
+        case 'author_za':
+          return (wb?.author || '').localeCompare(wa?.author || '');
         case 'title_az':
           return (wa?.title || '').localeCompare(wb?.title || '');
+        case 'title_za':
+          return (wb?.title || '').localeCompare(wa?.title || '');
         case 'pages_asc':
           return (wa?.page_count || 0) - (wb?.page_count || 0);
         case 'pages_desc':
           return (wb?.page_count || 0) - (wa?.page_count || 0);
         case 'priority':
           return (PRIORITY_RANK[a.priority || ''] ?? 9) - (PRIORITY_RANK[b.priority || ''] ?? 9);
+        case 'genre':
+          return (wa?.genres[0] || '').localeCompare(wb?.genres[0] || '');
+        case 'type':
+          return (wa?.type || '').localeCompare(wb?.type || '');
         default:
           return 0;
       }
@@ -189,10 +197,14 @@ export default function TbrList({ entries, onChanged }: { entries: TbrEntry[]; o
               <option value="date_added_desc">Date added (newest)</option>
               <option value="date_added_asc">Date added (oldest)</option>
               <option value="author_az">Author A–Z</option>
+              <option value="author_za">Author Z–A</option>
               <option value="title_az">Title A–Z</option>
+              <option value="title_za">Title Z–A</option>
               <option value="pages_asc">Pages (fewest)</option>
               <option value="pages_desc">Pages (most)</option>
               <option value="priority">Priority</option>
+              <option value="genre">Genre</option>
+              <option value="type">Type</option>
             </select>
           </div>
         </div>

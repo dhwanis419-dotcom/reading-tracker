@@ -37,7 +37,28 @@ export default function WorkDetailPage() {
       .select('*')
       .eq('work_id', workId)
       .order('start_date', { ascending: false });
-    setInstances((instData as unknown as ReadingInstance[]) || []);
+    const inst = (instData as unknown as ReadingInstance[]) || [];
+    setInstances(inst);
+
+    // Fetch every session across all instances up front so summary stats
+    // (days spent, session count, pages read) are available without
+    // requiring the user to expand each reading first.
+    if (inst.length > 0) {
+      const { data: allEntries } = await supabase
+        .from('reading_entries')
+        .select('*')
+        .in('reading_instance_id', inst.map((i) => i.id))
+        .order('date', { ascending: true });
+      const grouped: Record<string, ReadingEntry[]> = {};
+      for (const e of (allEntries as unknown as ReadingEntry[]) || []) {
+        if (!grouped[e.reading_instance_id]) grouped[e.reading_instance_id] = [];
+        grouped[e.reading_instance_id].push(e);
+      }
+      setEntriesByInstance(grouped);
+    } else {
+      setEntriesByInstance({});
+    }
+
     setLoading(false);
   }, [workId]);
 
@@ -155,6 +176,13 @@ export default function WorkDetailPage() {
         </div>
       </div>
 
+      {work.general_notes && (
+        <div className="catalog-card p-4">
+          <h3 className="catalog-tab text-spine mb-2">Notes</h3>
+          <p className="text-sm whitespace-pre-wrap">{work.general_notes}</p>
+        </div>
+      )}
+
       <div className="space-y-4">
         <h3 className="catalog-tab text-spine">Reading history ({instances.length} {instances.length === 1 ? 'time' : 'times'})</h3>
 
@@ -163,6 +191,9 @@ export default function WorkDetailPage() {
         {instances.map((inst, idx) => {
           const isExpanded = expanded.has(inst.id);
           const label = instances.length > 1 ? `Reading ${instances.length - idx}` : 'Reading';
+          const sessions = entriesByInstance[inst.id] || [];
+          const daysSpent = new Set(sessions.map((e) => new Date(e.date).toISOString().slice(0, 10))).size;
+          const totalRead = sessions.reduce((sum, e) => sum + Math.max(0, e.amount_read), 0);
           return (
             <div key={inst.id} className="catalog-card p-4">
               <div className="flex items-start justify-between flex-wrap gap-3">
@@ -172,6 +203,12 @@ export default function WorkDetailPage() {
                     Started {new Date(inst.start_date).toLocaleDateString()}
                     {inst.finish_date && ` · Finished ${new Date(inst.finish_date).toLocaleDateString()}`}
                   </div>
+                  {sessions.length > 0 && (
+                    <div className="text-xs font-mono text-inkfaint mt-1">
+                      {daysSpent} {daysSpent === 1 ? 'day' : 'days'} · {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}
+                      {inst.progress_unit === 'page' && ` · ${totalRead} pages read`}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2 mt-2 items-center">
                     <span className="stamp text-moss capitalize">{inst.status.replace('_', ' ')}</span>
                     {inst.favorite && <span className="text-brass text-sm">★ favorite</span>}

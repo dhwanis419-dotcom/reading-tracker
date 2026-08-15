@@ -15,6 +15,12 @@ export default function LibraryPage() {
   const [fictionFilter, setFictionFilter] = useState<string>('all');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [minRating, setMinRating] = useState('');
+  const [authorFilter, setAuthorFilter] = useState('');
+  const [genreFilter, setGenreFilter] = useState('all');
+  const [tagFilter, setTagFilter] = useState('all');
+  const [collectionFilter, setCollectionFilter] = useState('all');
+  const [finishedFrom, setFinishedFrom] = useState('');
+  const [finishedTo, setFinishedTo] = useState('');
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
@@ -31,6 +37,24 @@ export default function LibraryPage() {
     load();
   }, [load]);
 
+  const allGenres = useMemo(() => {
+    const s = new Set<string>();
+    instances.forEach((i) => i.work?.genres.forEach((g) => s.add(g)));
+    return Array.from(s).sort();
+  }, [instances]);
+
+  const allTags = useMemo(() => {
+    const s = new Set<string>();
+    instances.forEach((i) => i.work?.tags.forEach((t) => s.add(t)));
+    return Array.from(s).sort();
+  }, [instances]);
+
+  const allCollections = useMemo(() => {
+    const s = new Set<string>();
+    instances.forEach((i) => i.work?.collections.forEach((c) => s.add(c)));
+    return Array.from(s).sort();
+  }, [instances]);
+
   const filtered = useMemo(() => {
     let list = instances;
     if (tab !== 'all') list = list.filter((i) => i.status === tab);
@@ -41,6 +65,16 @@ export default function LibraryPage() {
       const min = parseFloat(minRating);
       list = list.filter((i) => (i.rating ?? -1) >= min);
     }
+    if (authorFilter.trim()) {
+      const q = authorFilter.toLowerCase();
+      list = list.filter((i) => i.work?.author?.toLowerCase().includes(q));
+    }
+    if (genreFilter !== 'all') list = list.filter((i) => i.work?.genres.includes(genreFilter));
+    if (tagFilter !== 'all') list = list.filter((i) => i.work?.tags.includes(tagFilter));
+    if (collectionFilter !== 'all') list = list.filter((i) => i.work?.collections.includes(collectionFilter));
+    if (finishedFrom) list = list.filter((i) => i.finish_date && new Date(i.finish_date) >= new Date(finishedFrom));
+    if (finishedTo) list = list.filter((i) => i.finish_date && new Date(i.finish_date) <= new Date(finishedTo + 'T23:59:59'));
+
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((i) => {
@@ -66,7 +100,25 @@ export default function LibraryPage() {
     }
 
     return list;
-  }, [instances, tab, typeFilter, fictionFilter, favoritesOnly, minRating, search]);
+  }, [instances, tab, typeFilter, fictionFilter, favoritesOnly, minRating, authorFilter, genreFilter, tagFilter, collectionFilter, finishedFrom, finishedTo, search]);
+
+  const filtersActive = typeFilter !== 'all' || fictionFilter !== 'all' || favoritesOnly || minRating ||
+    authorFilter || genreFilter !== 'all' || tagFilter !== 'all' || collectionFilter !== 'all' ||
+    finishedFrom || finishedTo || search;
+
+  function clearFilters() {
+    setTypeFilter('all');
+    setFictionFilter('all');
+    setFavoritesOnly(false);
+    setMinRating('');
+    setAuthorFilter('');
+    setGenreFilter('all');
+    setTagFilter('all');
+    setCollectionFilter('all');
+    setFinishedFrom('');
+    setFinishedTo('');
+    setSearch('');
+  }
 
   const tabs: { key: StatusTab; label: string }[] = [
     { key: 'all', label: 'All Works' },
@@ -97,46 +149,94 @@ export default function LibraryPage() {
         ))}
       </div>
 
-      <div className="catalog-card p-4 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[180px]">
-          <label className="catalog-tab text-inkfaint block mb-1">Search</label>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Title, author, genre, tag…"
-            className="w-full border border-line bg-card rounded-sm px-3 py-2 text-sm"
-          />
+      <div className="catalog-card p-4 space-y-3">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[180px]">
+            <label className="catalog-tab text-inkfaint block mb-1">Search</label>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Title, author, genre, tag…"
+              className="w-full border border-line bg-card rounded-sm px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Author</label>
+            <input
+              value={authorFilter}
+              onChange={(e) => setAuthorFilter(e.target.value)}
+              placeholder="Author name"
+              className="w-40 border border-line bg-card rounded-sm px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Type</label>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as any)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm">
+              <option value="all">All</option>
+              <option value="book">Book</option>
+              <option value="short_story">Short Story</option>
+              <option value="article">Article</option>
+            </select>
+          </div>
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Fiction</label>
+            <select value={fictionFilter} onChange={(e) => setFictionFilter(e.target.value)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm">
+              <option value="all">All</option>
+              <option value="fiction">Fiction</option>
+              <option value="non_fiction">Non-fiction</option>
+            </select>
+          </div>
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Genre</label>
+            <select value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm">
+              <option value="all">All</option>
+              {allGenres.map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Tag</label>
+            <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm">
+              <option value="all">All</option>
+              {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Collection</label>
+            <select value={collectionFilter} onChange={(e) => setCollectionFilter(e.target.value)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm">
+              <option value="all">All</option>
+              {allCollections.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
-        <div>
-          <label className="catalog-tab text-inkfaint block mb-1">Type</label>
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as any)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm">
-            <option value="all">All</option>
-            <option value="book">Book</option>
-            <option value="short_story">Short Story</option>
-            <option value="article">Article</option>
-          </select>
+
+        <div className="flex flex-wrap gap-3 items-end pt-2 border-t border-line">
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Min rating</label>
+            <input
+              type="number" min="0" max="10" step="0.5"
+              value={minRating}
+              onChange={(e) => setMinRating(e.target.value)}
+              className="w-20 border border-line bg-card rounded-sm px-2 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Finished from</label>
+            <input type="date" value={finishedFrom} onChange={(e) => setFinishedFrom(e.target.value)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="catalog-tab text-inkfaint block mb-1">Finished to</label>
+            <input type="date" value={finishedTo} onChange={(e) => setFinishedTo(e.target.value)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm" />
+          </div>
+          <label className="catalog-tab flex items-center gap-2 pb-2 cursor-pointer">
+            <input type="checkbox" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} />
+            Favorites only
+          </label>
+          {filtersActive && (
+            <button onClick={clearFilters} className="catalog-tab text-inkfaint hover:text-spine pb-2">
+              Clear all filters
+            </button>
+          )}
         </div>
-        <div>
-          <label className="catalog-tab text-inkfaint block mb-1">Fiction</label>
-          <select value={fictionFilter} onChange={(e) => setFictionFilter(e.target.value)} className="border border-line bg-card rounded-sm px-2 py-2 text-sm">
-            <option value="all">All</option>
-            <option value="fiction">Fiction</option>
-            <option value="non_fiction">Non-fiction</option>
-          </select>
-        </div>
-        <div>
-          <label className="catalog-tab text-inkfaint block mb-1">Min rating</label>
-          <input
-            type="number" min="0" max="10" step="0.5"
-            value={minRating}
-            onChange={(e) => setMinRating(e.target.value)}
-            className="w-20 border border-line bg-card rounded-sm px-2 py-2 text-sm"
-          />
-        </div>
-        <label className="catalog-tab flex items-center gap-2 pb-2 cursor-pointer">
-          <input type="checkbox" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} />
-          Favorites only
-        </label>
       </div>
 
       {loading ? (

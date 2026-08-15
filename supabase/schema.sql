@@ -22,6 +22,7 @@ create table works (
   article_site text,
   article_pub_date text,
   article_read_time integer,
+  general_notes text,
   created_at timestamptz not null default now()
 );
 

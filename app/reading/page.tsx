@@ -84,6 +84,9 @@ export default function ReadingPage() {
                 <div className="flex-1 min-w-0">
                   <div className="font-display italic text-lg leading-tight truncate">{w?.title}</div>
                   {w?.author && <div className="text-sm text-inkfaint truncate">{w.author}</div>}
+                  {w?.genres && w.genres.length > 0 && (
+                    <div className="text-xs text-inkfaint truncate mt-0.5">{w.genres.slice(0, 2).join(', ')}</div>
+                  )}
 
                   <div className="mt-2 h-1.5 bg-line rounded-full overflow-hidden">
                     <div className="h-full bg-brass" style={{ width: `${pct ?? 0}%` }} />
@@ -93,6 +96,10 @@ export default function ReadingPage() {
                       ? `page ${inst.current_progress}${w?.page_count ? ` / ${w.page_count}` : ''}`
                       : `${inst.current_progress}%`}
                     {inst.status === 'paused' && ' · paused'}
+                  </div>
+                  <div className="text-[11px] font-mono text-inkfaint mt-0.5">
+                    Started {new Date(inst.start_date).toLocaleDateString()}
+                    {inst.last_read_date && ` · Last read ${new Date(inst.last_read_date).toLocaleDateString()}`}
                   </div>
 
                   <div className="flex flex-wrap gap-2 mt-3">
