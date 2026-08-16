@@ -44,6 +44,20 @@ export interface ArticleMetadata {
   site: string | null;
 }
 
+// Open Library's search endpoint often omits page count entirely — it's
+// only reliably present on the per-edition record. When a result has an
+// ISBN but no page count, this looks the edition up directly to fill it in.
+export async function fetchPageCountByIsbn(isbn: string): Promise<number | null> {
+  try {
+    const res = await fetch(`https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data.number_of_pages === 'number' ? data.number_of_pages : null;
+  } catch {
+    return null;
+  }
+}
+
 // Lightweight article metadata extraction: pulls the <title> tag and
 // hostname from the page. No paid API involved. Extraction happens via
 // our own Next.js API route to avoid CORS issues fetching arbitrary sites

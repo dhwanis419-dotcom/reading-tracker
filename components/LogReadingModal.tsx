@@ -13,26 +13,45 @@ export default function LogReadingModal({
   onClose: () => void;
   onLogged: () => void;
 }) {
-  const unit = instance.progress_unit;
+  const unit = instance.progress_unit; // the unit the instance is actually stored in
+  const pageCount = instance.work?.page_count ?? null;
+
+  // Books with a known page count can be logged either way; anything else
+  // (short stories/articles logged by percent, or a book with no page
+  // count on file) only offers the one input that makes sense.
+  const canToggle = unit === 'page' && pageCount != null && pageCount > 0;
+  const [inputMode, setInputMode] = useState<'page' | 'percent'>('page');
+
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [progressAfter, setProgressAfter] = useState<string>('');
+  const [rawInput, setRawInput] = useState<string>('');
   const [minutes, setMinutes] = useState<string>('');
   const [thoughts, setThoughts] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const before = instance.current_progress;
-  const afterNum = parseFloat(progressAfter);
-  const amount = !isNaN(afterNum) ? afterNum - before : null;
+  const before = instance.current_progress; // always stored in the instance's native unit
+  const rawNum = parseFloat(rawInput);
+
+  // Convert whatever the person typed into the instance's native unit
+  // (pages for books, percent for everything else) so storage stays
+  // consistent regardless of how it was entered.
+  let afterNum: number | null = null;
+  if (!isNaN(rawNum)) {
+    if (unit === 'page' && inputMode === 'percent' && pageCount) {
+      afterNum = Math.round((rawNum / 100) * pageCount);
+    } else {
+      afterNum = rawNum;
+    }
+  }
+
+  const amount = afterNum !== null ? afterNum - before : null;
+  const beforeAsPercent = unit === 'page' && pageCount ? Math.round((before / pageCount) * 100) : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isNaN(afterNum)) {
-      setError(unit === 'page' ? 'Enter the page you reached.' : 'Enter the percentage you reached.');
+    if (afterNum === null) {
+      setError('Enter how far you got.');
       return;
-    }
-    if (afterNum < before) {
-      setError(`That's behind your current progress (${before}${unit === 'percent' ? '%' : ''}). Enter a manual correction below if this is intentional.`);
     }
     setSaving(true);
     setError(null);
@@ -48,7 +67,7 @@ export default function LogReadingModal({
       });
       if (entryError) throw entryError;
 
-      const finished = unit === 'percent' ? afterNum >= 100 : instance.work?.page_count ? afterNum >= instance.work.page_count : false;
+      const finished = unit === 'percent' ? afterNum >= 100 : pageCount ? afterNum >= pageCount : false;
 
       const { error: updateError } = await supabase
         .from('reading_instances')
@@ -90,28 +109,51 @@ export default function LogReadingModal({
           </div>
         </div>
 
+        {canToggle && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setInputMode('page')}
+              className={`catalog-tab px-3 py-1.5 rounded-sm border ${inputMode === 'page' ? 'bg-moss text-card border-moss' : 'border-line text-inkfaint'}`}
+            >
+              Enter as page
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('percent')}
+              className={`catalog-tab px-3 py-1.5 rounded-sm border ${inputMode === 'percent' ? 'bg-moss text-card border-moss' : 'border-line text-inkfaint'}`}
+            >
+              Enter as %
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4 items-end">
           <div>
             <label className="catalog-tab text-inkfaint block mb-1">
-              Current: {before}{unit === 'percent' ? '%' : ''}
+              Currently at: {before}{unit === 'percent' ? '%' : ''}
+              {beforeAsPercent !== null && ` (${beforeAsPercent}%)`}
             </label>
             <label className="catalog-tab text-inkfaint block mb-1">
-              Reached ({unit === 'page' ? 'page' : '%'})
+              Reached ({unit === 'page' && inputMode === 'page' ? 'page' : '%'})
             </label>
             <input
               type="number"
-              step={unit === 'percent' ? '0.1' : '1'}
-              value={progressAfter}
-              onChange={(e) => setProgressAfter(e.target.value)}
+              step={unit === 'percent' || inputMode === 'percent' ? '0.1' : '1'}
+              value={rawInput}
+              onChange={(e) => setRawInput(e.target.value)}
               className="w-full border border-line bg-card rounded-sm px-3 py-2 text-sm"
               required
             />
           </div>
           <div className="text-sm text-inkfaint pb-2">
-            {amount !== null && !isNaN(amount) && (
+            {amount !== null && (
               <span className="stamp text-moss">
                 {amount >= 0 ? `+${amount}` : amount} {unit === 'page' ? 'pages' : '%'}
               </span>
+            )}
+            {unit === 'page' && inputMode === 'percent' && afterNum !== null && (
+              <div className="text-xs mt-1">= page {afterNum}{pageCount ? ` / ${pageCount}` : ''}</div>
             )}
           </div>
         </div>

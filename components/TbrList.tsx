@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { TbrEntry, WorkType } from '@/lib/types';
@@ -10,6 +11,7 @@ type SortKey = 'date_added_desc' | 'date_added_asc' | 'author_az' | 'author_za' 
 const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
 export default function TbrList({ entries, onChanged }: { entries: TbrEntry[]; onChanged: () => void }) {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<WorkType | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -241,7 +243,11 @@ export default function TbrList({ entries, onChanged }: { entries: TbrEntry[]; o
           const w = entry.work;
           if (!w) return null;
           return (
-            <div key={entry.id} className="catalog-card p-4 flex gap-3">
+            <div
+              key={entry.id}
+              onClick={() => router.push(`/work/${w.id}`)}
+              className="catalog-card p-4 flex gap-3 cursor-pointer hover:shadow-lg transition-shadow"
+            >
               {w.cover_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={w.cover_url} alt="" className="w-16 h-24 object-cover rounded-sm flex-shrink-0" />
@@ -256,7 +262,7 @@ export default function TbrList({ entries, onChanged }: { entries: TbrEntry[]; o
                 <div className="flex items-start justify-between gap-2">
                   <div className="font-display italic text-lg leading-tight truncate">{w.title}</div>
                   <button
-                    onClick={() => setDeleting(entry)}
+                    onClick={(e) => { e.stopPropagation(); setDeleting(entry); }}
                     className="text-inkfaint hover:text-spine text-xs flex-shrink-0"
                     title="Remove from TBR"
                   >
@@ -265,12 +271,16 @@ export default function TbrList({ entries, onChanged }: { entries: TbrEntry[]; o
                 </div>
                 {w.author && <div className="text-sm text-inkfaint truncate">{w.author}</div>}
                 {w.article_site && <div className="text-xs text-inkfaint font-mono mt-0.5">{w.article_site}</div>}
-                <div className="flex flex-wrap gap-1 mt-2">
+                <div className="flex flex-wrap gap-1.5 mt-2 items-center">
                   {entry.priority && <span className="stamp text-spine">{entry.priority}</span>}
-                  {w.page_count && <span className="text-xs font-mono text-inkfaint">{w.page_count}pp</span>}
+                  {w.page_count ? (
+                    <span className="text-xs font-mono text-ink bg-line/40 px-1.5 py-0.5 rounded-sm">{w.page_count} pp</span>
+                  ) : w.type === 'book' ? (
+                    <span className="text-xs font-mono text-inkfaint italic">pages unknown</span>
+                  ) : null}
                 </div>
                 <button
-                  onClick={() => startReading(entry)}
+                  onClick={(e) => { e.stopPropagation(); startReading(entry); }}
                   disabled={startingId === entry.id}
                   className="catalog-tab mt-3 bg-moss text-card px-3 py-1.5 rounded-sm hover:bg-mosslight disabled:opacity-50"
                 >

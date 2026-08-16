@@ -97,6 +97,11 @@ export default function WorkDetailPage() {
         current_progress: 0,
       });
       if (error) throw error;
+
+      // If this work is still sitting active on the TBR shelf, take it off
+      // — otherwise it would show as both "to read" and "currently reading".
+      await supabase.from('tbr_entries').update({ active: false }).eq('work_id', work.id).eq('active', true);
+
       router.push('/reading');
     } finally {
       setStartingReread(false);
@@ -141,14 +146,10 @@ export default function WorkDetailPage() {
             {work.fiction_status && <span className="stamp text-spine capitalize">{work.fiction_status.replace('_', ' ')}</span>}
             {work.page_count && <span className="text-xs font-mono text-inkfaint self-center">{work.page_count}pp</span>}
             {work.isbn && <span className="text-xs font-mono text-inkfaint self-center">ISBN {work.isbn}</span>}
-            {work.article_site && (
-              work.article_url ? (
-                <a href={work.article_url} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-spine underline self-center">
-                  {work.article_site} ↗
-                </a>
-              ) : (
-                <span className="text-xs font-mono text-inkfaint self-center">{work.article_site}</span>
-              )
+            {work.article_url && (
+              <a href={work.article_url} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-spine underline self-center">
+                {work.article_site || 'Open article'} ↗
+              </a>
             )}
           </div>
           {work.genres.length > 0 && (
@@ -162,6 +163,13 @@ export default function WorkDetailPage() {
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {work.collections.map((c) => (
                 <span key={c} className="text-xs px-2 py-0.5 rounded-sm bg-brass/10 border border-brass/40 text-inkfaint">📚 {c}</span>
+              ))}
+            </div>
+          )}
+          {work.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {work.tags.map((t) => (
+                <span key={t} className="text-xs px-2 py-0.5 rounded-sm bg-moss/10 border border-moss/30 text-inkfaint">#{t}</span>
               ))}
             </div>
           )}

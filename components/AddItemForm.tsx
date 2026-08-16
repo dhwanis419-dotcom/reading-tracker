@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { searchOpenLibrary, extractArticleMetadata, OpenLibraryResult } from '@/lib/openlibrary';
+import { searchOpenLibrary, extractArticleMetadata, fetchPageCountByIsbn, OpenLibraryResult } from '@/lib/openlibrary';
 import DuplicateModal from '@/components/DuplicateModal';
 import type { WorkType, Priority, FictionStatus, Work } from '@/lib/types';
 
@@ -31,6 +31,7 @@ export default function AddItemForm({
   const [priority, setPriority] = useState<Priority>(null);
   const [genres, setGenres] = useState<string[]>([]);
   const [fiction, setFiction] = useState<FictionStatus>(null);
+  const [manualPageCount, setManualPageCount] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [collectionsInput, setCollectionsInput] = useState('');
 
@@ -51,6 +52,7 @@ export default function AddItemForm({
     setPriority(null);
     setGenres([]);
     setFiction(null);
+    setManualPageCount('');
     setTagsInput('');
     setCollectionsInput('');
     setCandidates([]);
@@ -58,6 +60,24 @@ export default function AddItemForm({
     setError(null);
     setDupCandidates(null);
     setPendingPayload(null);
+  }
+
+  const [fetchingPages, setFetchingPages] = useState(false);
+
+  async function selectCandidate(c: OpenLibraryResult) {
+    setChosen(c);
+    if (c.page_count != null) setManualPageCount(String(c.page_count));
+    if (c.page_count == null && c.isbn) {
+      setFetchingPages(true);
+      const pages = await fetchPageCountByIsbn(c.isbn);
+      if (pages != null) {
+        const updated = { ...c, page_count: pages };
+        setChosen(updated);
+        setManualPageCount(String(pages));
+        setCandidates((prev) => prev.map((cand) => (cand === c ? updated : cand)));
+      }
+      setFetchingPages(false);
+    }
   }
 
   async function handleLookup() {
@@ -124,7 +144,7 @@ export default function AddItemForm({
           title: chosen?.title || title.trim(),
           author: chosen?.author || author.trim() || null,
           cover_url: chosen?.cover_url || null,
-          page_count: chosen?.page_count || null,
+          page_count: manualPageCount.trim() ? parseInt(manualPageCount) : (chosen?.page_count || null),
           isbn: chosen?.isbn || null,
           edition: chosen?.edition || null,
           publication_info: chosen?.publication_info || null,
@@ -308,7 +328,7 @@ export default function AddItemForm({
                   <button
                     type="button"
                     key={i}
-                    onClick={() => setChosen(c)}
+                    onClick={() => selectCandidate(c)}
                     className={`text-left border rounded-sm p-3 flex gap-3 ${
                       chosen === c ? 'border-brass bg-brass/10' : 'border-line hover:bg-line/20'
                     }`}
@@ -322,32 +342,55 @@ export default function AddItemForm({
                     <div className="text-sm">
                       <div className="font-medium">{c.title}</div>
                       <div className="text-inkfaint">{c.author}</div>
-                      {c.page_count && <div className="text-inkfaint font-mono text-xs mt-1">{c.page_count} pp.</div>}
+                      {c.page_count ? (
+                        <div className="text-inkfaint font-mono text-xs mt-1">{c.page_count} pp.</div>
+                      ) : chosen === c && fetchingPages ? (
+                        <div className="text-inkfaint font-mono text-xs mt-1">Looking up page count…</div>
+                      ) : c.isbn ? null : (
+                        <div className="text-inkfaint font-mono text-xs mt-1">Page count unavailable — enter manually below</div>
+                      )}
                     </div>
                   </button>
                 ))}
               </div>
             )}
 
-            <div>
-              <span className="catalog-tab text-inkfaint block mb-1">Fiction / Non-fiction</span>
-              <div className="flex gap-2">
-                {(['fiction', 'non_fiction'] as const).map((f) => (
-                  <button
-                    type="button"
-                    key={f}
-                    onClick={() => setFiction(fiction === f ? null : f)}
-                    className={`catalog-tab px-3 py-1.5 rounded-sm border ${
-                      fiction === f ? 'bg-moss text-card border-moss' : 'border-line text-inkfaint'
-                    }`}
-                  >
-                    {f === 'fiction' ? 'Fiction' : 'Non-fiction'}
-                  </button>
-                ))}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="catalog-tab text-inkfaint block mb-1">Pages</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={manualPageCount}
+                  onChange={(e) => setManualPageCount(e.target.value)}
+                  placeholder="e.g. 320"
+                  className="w-full border border-line bg-card rounded-sm px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-inkfaint mt-1">
+                  Auto-filled when available — always editable, since this drives your reading progress bar.
+                </p>
+              </div>
+              <div>
+                <span className="catalog-tab text-inkfaint block mb-1">Fiction / Non-fiction</span>
+                <div className="flex gap-2">
+                  {(['fiction', 'non_fiction'] as const).map((f) => (
+                    <button
+                      type="button"
+                      key={f}
+                      onClick={() => setFiction(fiction === f ? null : f)}
+                      className={`catalog-tab px-3 py-1.5 rounded-sm border ${
+                        fiction === f ? 'bg-moss text-card border-moss' : 'border-line text-inkfaint'
+                      }`}
+                    >
+                      {f === 'fiction' ? 'Fiction' : 'Non-fiction'}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         )}
+
 
         <div>
           <span className="catalog-tab text-inkfaint block mb-1">Genres</span>
