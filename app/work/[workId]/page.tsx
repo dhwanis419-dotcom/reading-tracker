@@ -7,6 +7,7 @@ import EditWorkModal from '@/components/EditWorkModal';
 import EditInstanceModal from '@/components/EditInstanceModal';
 import EditEntryModal from '@/components/EditEntryModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import QuotesSection from '@/components/QuotesSection';
 import type { Work, ReadingInstance, ReadingEntry } from '@/lib/types';
 
 export default function WorkDetailPage() {
@@ -190,6 +191,8 @@ export default function WorkDetailPage() {
           <p className="text-sm whitespace-pre-wrap">{work.general_notes}</p>
         </div>
       )}
+
+      <QuotesSection workId={work.id} />
 
       <div className="space-y-4">
         <h3 className="catalog-tab text-spine">Reading history ({instances.length} {instances.length === 1 ? 'time' : 'times'})</h3>

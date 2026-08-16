@@ -87,3 +87,24 @@ create policy "allow all - works" on works for all using (true) with check (true
 create policy "allow all - tbr_entries" on tbr_entries for all using (true) with check (true);
 create policy "allow all - reading_instances" on reading_instances for all using (true) with check (true);
 create policy "allow all - reading_entries" on reading_entries for all using (true) with check (true);
+
+-- Quotes / highlights captured per work.
+create table quotes (
+  id uuid primary key default uuid_generate_v4(),
+  work_id uuid not null references works(id) on delete cascade,
+  quote_text text not null,
+  page_number integer,
+  created_at timestamptz not null default now()
+);
+alter table quotes enable row level security;
+create policy "allow all - quotes" on quotes for all using (true) with check (true);
+create index idx_quotes_work on quotes(work_id);
+
+-- Yearly reading goal.
+create table reading_goals (
+  year integer primary key,
+  target integer not null,
+  created_at timestamptz not null default now()
+);
+alter table reading_goals enable row level security;
+create policy "allow all - reading_goals" on reading_goals for all using (true) with check (true);

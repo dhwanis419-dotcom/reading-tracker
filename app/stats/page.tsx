@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import ReadingGoalCard from '@/components/ReadingGoalCard';
 import type { ReadingInstance, ReadingEntry } from '@/lib/types';
 
 interface EntryWithUnit extends ReadingEntry {
@@ -101,6 +102,20 @@ export default function StatsPage() {
       <div>
         <h2 className="font-display italic text-3xl">Statistics</h2>
         <p className="text-inkfaint text-sm mt-1">Calculated entirely from your reading history.</p>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <ReadingGoalCard booksFinishedThisYear={stats.finishedThisYear} />
+        <Link
+          href="/year-in-reading"
+          className="catalog-card p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
+        >
+          <div>
+            <h3 className="catalog-tab text-spine mb-1">Your Year in Reading</h3>
+            <p className="text-sm text-inkfaint">A look back at everything you've read this year.</p>
+          </div>
+          <span className="font-display italic text-2xl text-brass">→</span>
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">

@@ -62,3 +62,17 @@ export interface ReadingEntry {
   thoughts: string | null;
   created_at: string;
 }
+
+export interface Quote {
+  id: string;
+  work_id: string;
+  quote_text: string;
+  page_number: number | null;
+  created_at: string;
+}
+
+export interface ReadingGoal {
+  year: number;
+  target: number;
+  created_at: string;
+}
