@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import LogReadingModal from '@/components/LogReadingModal';
 import FinishModal from '@/components/FinishModal';
@@ -8,6 +9,7 @@ import AddItemForm from '@/components/AddItemForm';
 import type { ReadingInstance } from '@/lib/types';
 
 export default function ReadingPage() {
+  const router = useRouter();
   const [instances, setInstances] = useState<ReadingInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [logging, setLogging] = useState<ReadingInstance | null>(null);
@@ -74,7 +76,11 @@ export default function ReadingPage() {
               : null;
 
             return (
-              <div key={inst.id} className="catalog-card p-4 flex gap-3">
+              <div
+                key={inst.id}
+                onClick={() => router.push(`/work/${inst.work_id}`)}
+                className="catalog-card p-4 flex gap-3 cursor-pointer hover:shadow-lg transition-shadow"
+              >
                 {w?.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={w.cover_url} alt="" className="w-16 h-24 object-cover rounded-sm flex-shrink-0" />
@@ -104,24 +110,24 @@ export default function ReadingPage() {
 
                   <div className="flex flex-wrap gap-2 mt-3">
                     <button
-                      onClick={() => setLogging(inst)}
+                      onClick={(e) => { e.stopPropagation(); setLogging(inst); }}
                       className="catalog-tab bg-spine text-card px-3 py-1.5 rounded-sm hover:bg-spinedark"
                     >
                       Log Reading
                     </button>
                     {inst.status === 'currently_reading' ? (
-                      <button onClick={() => setStatus(inst, 'paused')} className="catalog-tab border border-line px-3 py-1.5 rounded-sm hover:bg-line/30">
+                      <button onClick={(e) => { e.stopPropagation(); setStatus(inst, 'paused'); }} className="catalog-tab border border-line px-3 py-1.5 rounded-sm hover:bg-line/30">
                         Pause
                       </button>
                     ) : (
-                      <button onClick={() => setStatus(inst, 'currently_reading')} className="catalog-tab border border-line px-3 py-1.5 rounded-sm hover:bg-line/30">
+                      <button onClick={(e) => { e.stopPropagation(); setStatus(inst, 'currently_reading'); }} className="catalog-tab border border-line px-3 py-1.5 rounded-sm hover:bg-line/30">
                         Resume
                       </button>
                     )}
-                    <button onClick={() => setFinishing(inst)} className="catalog-tab border border-line px-3 py-1.5 rounded-sm hover:bg-line/30">
+                    <button onClick={(e) => { e.stopPropagation(); setFinishing(inst); }} className="catalog-tab border border-line px-3 py-1.5 rounded-sm hover:bg-line/30">
                       Finish
                     </button>
-                    <button onClick={() => setStatus(inst, 'dnf')} className="catalog-tab border border-line px-3 py-1.5 rounded-sm text-inkfaint hover:bg-line/30">
+                    <button onClick={(e) => { e.stopPropagation(); setStatus(inst, 'dnf'); }} className="catalog-tab border border-line px-3 py-1.5 rounded-sm text-inkfaint hover:bg-line/30">
                       DNF
                     </button>
                   </div>
