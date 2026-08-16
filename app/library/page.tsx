@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { ReadingInstance, WorkType } from '@/lib/types';
 
 type StatusTab = 'all' | 'finished' | 'dnf' | 'paused' | 'currently_reading';
 
-export default function LibraryPage() {
+function LibraryPageInner() {
+  const searchParams = useSearchParams();
   const [instances, setInstances] = useState<ReadingInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<StatusTab>('all');
@@ -22,6 +24,15 @@ export default function LibraryPage() {
   const [finishedFrom, setFinishedFrom] = useState('');
   const [finishedTo, setFinishedTo] = useState('');
   const [search, setSearch] = useState('');
+
+  // Support being linked to with a filter preset, e.g. from the Organize
+  // page: /library?collection=Classics or /library?tag=re-read
+  useEffect(() => {
+    const c = searchParams.get('collection');
+    const t = searchParams.get('tag');
+    if (c) { setCollectionFilter(c); setTab('all'); }
+    if (t) { setTagFilter(t); setTab('all'); }
+  }, [searchParams]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -277,5 +288,13 @@ export default function LibraryPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LibraryPage() {
+  return (
+    <Suspense fallback={<p className="text-inkfaint italic">Loading…</p>}>
+      <LibraryPageInner />
+    </Suspense>
   );
 }

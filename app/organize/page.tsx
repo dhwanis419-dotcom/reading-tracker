@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Work } from '@/lib/types';
@@ -84,7 +85,12 @@ export default function OrganizePage() {
                     className="border border-line bg-card rounded-sm px-2 py-1 text-sm flex-1 mr-2"
                   />
                 ) : (
-                  <span>{name} <span className="text-inkfaint font-mono text-xs">×{count}</span></span>
+                  <Link
+                    href={`/library?${kind === 'tags' ? 'tag' : 'collection'}=${encodeURIComponent(name)}`}
+                    className="hover:text-spine hover:underline"
+                  >
+                    {name} <span className="text-inkfaint font-mono text-xs">×{count}</span>
+                  </Link>
                 )}
                 <div className="flex gap-2 flex-shrink-0">
                   {renaming?.kind === kind && renaming.name === name ? (
