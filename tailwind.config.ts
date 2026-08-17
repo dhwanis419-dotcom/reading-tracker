@@ -5,17 +5,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: '#EFE7D4',
-        card: '#FBF7EC',
-        ink: '#2A2622',
-        inkfaint: '#6B6355',
-        spine: '#6B2737',
-        spinedark: '#4E1D28',
-        moss: '#3F4B3B',
-        mosslight: '#5C6B54',
-        brass: '#A9822F',
-        brasslight: '#C9A24D',
-        line: '#D9CFB6',
+        paper: '#F2EDE1',
+        card: '#FAF7F0',
+        ink: '#3A342C',
+        inkfaint: '#8A7B6C',
+        spine: '#D97F5B',
+        spinedark: '#B85E3C',
+        moss: '#7C93A6',
+        mosslight: '#96AABA',
+        brass: '#C9A46B',
+        brasslight: '#DBC08F',
+        line: '#DED3BE',
       },
       fontFamily: {
         display: ['var(--font-fraunces)', 'serif'],
